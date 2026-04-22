@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Agenda - Dr.H. Askary, S.Sos., M.Si</title>
+    
+    <!-- PWA Manifest untuk Android agar bisa di-Instal -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkFnZW5kYSBXYWJ1cCBNYXRlbmciLAogICJzaG9ydF9uYW1lIjogIkFnZW5kYSIsCiAgImRlc2NyaXB0aW9uIjogIlNpc3RlbSBJbmZvcm1hc2kgQWdlbmRhIFBp bXBpbmFuIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmOGZhZmMiLAogICJ0aGVtZV9jb2xvciI6ICIjMWUzYThhIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAibG9nb19tYXRlbmcucG5nIiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9CiAgXQp9">
+    <meta name="theme-color" content="#1e3a8a">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        :root { 
+            --primary: #1e3a8a; 
+            --primary-dark: #0f172a;
+            --secondary: #4338ca;
+            --accent: #059669; 
+            --danger: #e11d48;
+            --bg-soft: #f1f5f9;
+        }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg-soft); 
+            color: #1e293b;
+            scroll-behavior: smooth;
+        }
+
+        .watermark-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 500px;
+            opacity: 0.08;
+            z-index: 1;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+        
+        @media (min-width: 768px) {
+            .watermark-overlay { width: 35%; }
+        }
+
+        .executive-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 20;
+        }
+
+        .executive-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .animate-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .stat-card-active {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+            ring: 2px solid var(--primary);
+            box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.1);
+            transform: scale(1.03);
+        }
+
+        .header-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .status-badge { font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.65rem; }
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden relative">
+
+<!-- Watermark Logo -->
+<img src="logo_mateng.png" class="watermark-overlay" alt="Watermark" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Logo_Kabupaten_Mamuju_Tengah.png/482px-Logo_Kabupaten_Mamuju_Tengah.png'">
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed top-4 right-4 md:top-6 md:right-6 z-[200] transform translate-x-full opacity-0 transition-all duration-500">
+    <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10 min-w-[280px]">
+        <div id="toast-icon-bg" class="p-2 bg-blue-500/20 text-blue-400 rounded-xl"><i data-lucide="bell" class="w-5 h-5"></i></div>
+        <div>
+            <p id="toast-title" class="text-[9px] uppercase font-black text-slate-400">Sistem</p>
+            <p id="toast-message" class="text-xs md:text-sm font-bold"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<header class="h-auto min-h-[5rem] md:h-24 header-glass flex flex-col md:flex-row items-center justify-between px-4 md:px-12 py-3 md:py-0 shrink-0 z-[60] sticky top-0 shadow-sm gap-3">
+    <div class="flex items-center gap-3 md:gap-5 w-full md:w-auto">
+        <div class="w-10 h-10 md:w-14 md:h-14 bg-white rounded-xl md:rounded-2xl flex items-center justify-center p-1.5 md:p-2 shadow-sm border border-slate-100 shrink-0">
+            <img src="logo_mateng.png" alt="Logo" class="w-full h-full object-contain" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Logo_Kabupaten_Mamuju_Tengah.png/482px-Logo_Kabupaten_Mamuju_Tengah.png'">
+        </div>
+        <div class="overflow-hidden">
+            <h1 id="main-display-name" class="text-sm md:text-xl font-extrabold text-slate-900 truncate">Dr.H. Askary, S.Sos., M.Si</h1>
+            <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-[8px] md:text-[10px] font-bold text-indigo-600 uppercase tracking-wider" id="main-display-role">Wakil Bupati Mamuju Tengah</span>
+                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                <p id="sync-status" class="text-[8px] md:text-[10px] font-bold text-emerald-600 uppercase">Terkoneksi</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex items-center justify-between md:justify-end gap-3 md:gap-6 w-full md:w-auto border-t md:border-none pt-2 md:pt-0">
+        <div class="flex items-center gap-2 md:gap-3">
+            <button id="notif-toggle-btn" onclick="window.requestNotificationPermission()" class="p-2 md:p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 border border-slate-200 transition-all relative">
+                <i data-lucide="bell" class="w-4 h-4 md:w-5 md:h-5"></i>
+                <span id="notif-status-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white hidden"></span>
+            </button>
+            <button id="auth-btn" onclick="window.handleAuthAction()" class="px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-[9px] md:text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="lock" class="w-3 h-3"></i><span>ADC</span>
+            </button>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="w-px h-6 md:h-10 bg-slate-200"></div>
+            <div class="text-right">
+                <p id="clock" class="text-lg md:text-2xl font-black text-slate-800 tabular-nums leading-none">00:00:00</p>
+                <p id="date-display" class="text-[7px] md:text-[9px] font-bold text-slate-400 uppercase mt-1">...</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="flex-1 overflow-y-auto relative">
+    <div class="max-w-7xl mx-auto p-4 md:p-12 space-y-8 md:space-y-12 relative z-10">
+        
+        <!-- Admin Panel -->
+        <div id="admin-panel" class="hidden bg-slate-900 p-6 md:p-10 rounded-3xl md:rounded-[3rem] shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 border border-white/5 animate-in relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-900/40 to-transparent"></div>
+            <div class="flex items-center gap-4 md:gap-6 text-white relative z-10">
+                <div class="p-4 bg-white/10 rounded-2xl backdrop-blur-md"><i data-lucide="plus-circle" class="w-8 h-8 text-emerald-400"></i></div>
+                <div>
+                    <h3 class="font-extrabold text-xl md:text-2xl">Kelola Jadwal</h3>
+                    <p class="text-[10px] md:text-sm text-slate-400 font-medium">Input agenda pimpinan dan dokumentasi.</p>
+                </div>
+            </div>
+            <button onclick="window.openActivityModal()" class="relative z-10 w-full md:w-auto px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95 transition-all">
+                Input Agenda Baru
+            </button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+            <div onclick="window.filterDashboard('today')" id="stat-today-card" class="stat-card p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] cursor-pointer stat-card-active group transition-all">
+                <p class="text-[8px] md:text-[10px] font-black text-slate-400 uppercase mb-2">Hari Ini</p>
+                <div class="flex items-end justify-between">
+                    <h3 id="count-today" class="text-3xl md:text-5xl font-black text-slate-900">0</h3>
+                    <div class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="calendar" class="w-5 h-5"></i></div>
+                </div>
+            </div>
+            <div onclick="window.filterDashboard('upcoming')" id="stat-upcoming-card" class="stat-card p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] cursor-pointer hover:bg-white group transition-all">
+                <p class="text-[8px] md:text-[10px] font-black text-slate-400 uppercase mb-2">Mendatang</p>
+                <div class="flex items-end justify-between">
+                    <h3 id="count-upcoming" class="text-3xl md:text-5xl font-black text-slate-900">0</h3>
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><i data-lucide="clock" class="w-5 h-5"></i></div>
+                </div>
+            </div>
+            <div onclick="window.filterDashboard('finished')" id="stat-finished-card" class="stat-card p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] cursor-pointer hover:bg-white group transition-all">
+                <p class="text-[8px] md:text-[10px] font-black text-slate-400 uppercase mb-2">Terlaksana</p>
+                <div class="flex items-end justify-between">
+                    <h3 id="count-finished" class="text-3xl md:text-5xl font-black text-slate-900">0</h3>
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                </div>
+            </div>
+            <div onclick="window.filterDashboard('postponed')" id="stat-postponed-card" class="stat-card p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] cursor-pointer hover:bg-white group transition-all">
+                <p class="text-[8px] md:text-[10px] font-black text-slate-400 uppercase mb-2">Ditunda</p>
+                <div class="flex items-end justify-between">
+                    <h3 id="count-postponed" class="text-3xl md:text-5xl font-black text-slate-900">0</h3>
+                    <div class="p-2 bg-rose-50 text-rose-600 rounded-xl"><i data-lucide="alert-circle" class="w-5 h-5"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="schedule-section" class="grid grid-cols-1 xl:grid-cols-3 gap-8 md:gap-10 items-start">
+            <div class="xl:col-span-2 space-y-6 md:space-y-10 order-2 xl:order-1">
+                <div class="flex items-center justify-between px-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2.5 h-10 bg-indigo-600 rounded-full"></div>
+                        <h2 id="timeline-header" class="text-xl md:text-3xl font-black text-slate-900 tracking-tight uppercase">Agenda</h2>
+                    </div>
+                    <button onclick="window.filterDashboard('today')" id="reset-filter" class="hidden text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase">Lihat Hari Ini</button>
+                </div>
+                <div id="timeline-container" class="space-y-8 relative before:absolute before:left-5 md:before:left-7 before:top-4 before:bottom-4 before:w-1.5 before:bg-slate-200/50"></div>
+            </div>
+
+            <!-- Chart & Test Button -->
+            <div class="space-y-6 md:space-y-8 sticky top-32 order-1 xl:order-2">
+                <div class="bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-200 shadow-sm text-center">
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase mb-8">Pencapaian</h4>
+                    <div class="h-48 md:h-64 flex items-center justify-center"><canvas id="statusChart"></canvas></div>
+                    <div class="mt-8 pt-8 border-t border-slate-100">
+                        <button onclick="window.sendTestNotification()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-indigo-900/20 active:scale-95 transition-all">
+                            Tes Notifikasi Sistem HP
+                        </button>
+                        <p class="text-[8px] text-slate-400 mt-4 uppercase font-bold">Harap 'Add to Home Screen' untuk hasil terbaik</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Modals -->
+<div id="login-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-sm p-8 md:p-12 animate-in text-center shadow-2xl">
+        <div class="w-16 h-16 bg-slate-50 text-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-slate-100"><i data-lucide="fingerprint" class="w-8 h-8"></i></div>
+        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Otentikasi ADC</h3>
+        <input type="password" id="login-pin" maxlength="4" placeholder="••••" class="w-full p-6 rounded-2xl border-2 border-slate-100 bg-slate-50 text-center text-5xl font-black tracking-[0.5em] focus:border-indigo-600 outline-none transition-all mb-10">
+        <button onclick="window.verifyPin()" class="w-full py-5 bg-blue-900 text-white rounded-xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all">Masuk</button>
+        <button onclick="window.closeLogin()" class="w-full mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Batal</button>
+    </div>
+</div>
+
+<div id="activity-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-3 md:p-4">
+    <div class="bg-white rounded-[2.5rem] md:rounded-[3.5rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in flex flex-col max-h-[95vh]">
+        <div class="p-8 md:p-10 border-b flex justify-between items-center bg-slate-50">
+            <h3 class="font-black text-xl md:text-2xl text-slate-900" id="modal-title">Entri Agenda</h3>
+            <button onclick="window.closeActivityModal()" class="p-3 bg-white text-slate-400 rounded-2xl hover:text-rose-500 shadow-sm transition-all"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <form id="activity-form" class="p-8 md:p-10 space-y-6 overflow-y-auto custom-scrollbar">
+            <input type="hidden" id="form-id">
+            <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nama Kegiatan</label><input type="text" id="f-title" required class="w-full p-5 rounded-2xl border border-slate-200 bg-slate-50 focus:border-indigo-600 outline-none font-bold"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Tanggal</label><input type="date" id="f-date" required class="w-full p-5 rounded-2xl border border-slate-200 bg-slate-50 outline-none font-bold"></div>
+                <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Waktu</label><input type="time" id="f-time" required class="w-full p-5 rounded-2xl border border-slate-200 bg-slate-50 outline-none font-bold"></div>
+            </div>
+            <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Lokasi</label><input type="text" id="f-location" class="w-full p-5 rounded-2xl border border-slate-200 bg-slate-50 outline-none font-bold"></div>
+            <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Status</label><select id="f-status" class="w-full p-5 rounded-2xl border border-slate-200 bg-slate-50 outline-none font-bold cursor-pointer"><option value="Terjadwal">Terjadwal</option><option value="Selesai">Selesai</option><option value="Ditunda">Ditunda</option></select></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Undangan</label><input type="file" id="f-file-input" accept="image/*,application/pdf" class="hidden"><div onclick="document.getElementById('f-file-input').click()" class="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50 cursor-pointer hover:border-indigo-400 transition-all"><i data-lucide="file-text" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i><p id="file-name" class="text-[10px] font-bold text-slate-400 uppercase">Pilih File</p></div><input type="hidden" id="f-file-data"></div>
+                <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 uppercase ml-2">Dokumentasi Foto</label><input type="file" id="f-photos-input" accept="image/*" multiple class="hidden"><div onclick="document.getElementById('f-photos-input').click()" class="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50 cursor-pointer hover:border-emerald-400 transition-all"><i data-lucide="camera" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i><p id="photos-label" class="text-[10px] font-bold text-slate-400 uppercase">Pilih Foto</p></div></div>
+            </div>
+            <div id="photos-preview-container" class="flex flex-wrap gap-3 pt-2"></div>
+            <input type="hidden" id="f-photos-data">
+            <div class="pt-6 flex flex-col gap-4"><button type="submit" id="submit-btn" class="btn-gradient w-full py-5 rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all">Simpan Agenda</button><button type="button" id="delete-btn" onclick="window.deleteEntry()" class="hidden w-full py-3 text-rose-500 font-bold text-[10px] uppercase hover:text-rose-700">Hapus Permanen</button></div>
+        </form>
+    </div>
+</div>
+
+<div id="viewer-modal" class="fixed inset-0 z-[200] hidden flex items-center justify-center bg-slate-950/98 backdrop-blur-lg p-2 md:p-6">
+    <div class="bg-white rounded-3xl md:rounded-[3rem] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in">
+        <div class="p-4 border-b flex justify-between items-center"><h4 class="font-black text-slate-800 text-xs uppercase">Pratinjau</h4><button onclick="window.closeViewer()" class="p-3 bg-slate-100 rounded-xl"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+        <div class="flex-1 bg-slate-100 p-4 flex items-center justify-center overflow-auto"><img id="view-img" class="hidden max-w-full max-h-full rounded-2xl shadow-2xl border-4 border-white"><iframe id="view-pdf" class="hidden w-full h-full rounded-2xl shadow-2xl" frameborder="0"></iframe></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMMdmBfmn_df4vHPQczS35P0d4NiO6cLk",
+      authDomain: "agenda-wakil-bupati.firebaseapp.com",
+      projectId: "agenda-wakil-bupati",
+      storageBucket: "agenda-wakil-bupati.firebasestorage.app",
+      messagingSenderId: "387072897278",
+      appId: "1:387072897278:web:c51355e9944f4100a0b5af",
+      measurementId: "G-7SSD2RR9SM"
+    };
+
+    const appIdForPath = typeof __app_id !== 'undefined' ? __app_id : 'agenda-wakil-bupati-main';
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const colRef = collection(db, 'artifacts', appIdForPath, 'public', 'data', 'activities');
+
+    let activities = [];
+    let userRole = 'Executive';
+    let dashboardFilter = 'today';
+    let charts = { status: null };
+    let currentPhotos = [];
+    let isInitialLoad = true;
+    let lastSummaryDate = null;
+    let notifiedIds = new Set();
+
+    // --- Service Worker Logic for System Notifications ---
+    const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+        self.addEventListener('notificationclick', e => {
+            e.notification.close();
+            e.waitUntil(clients.matchAll({type: 'window'}).then(clientsArr => {
+                if (clientsArr.length > 0) clientsArr[0].focus();
+                else clients.openWindow('/');
+            }));
+        });
+    `;
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(swBlob);
+
+    const registerSW = async () => {
+        if ('serviceWorker' in navigator) {
+            try { 
+                const reg = await navigator.serviceWorker.register(swUrl); 
+                console.log("SW registered successfully");
+            } catch (e) { 
+                console.warn("Service Worker registration failed. This is expected in preview environments but will work on GitHub Pages.", e); 
+            }
+        }
+    };
+
+    // --- Global Window Functions ---
+    window.requestNotificationPermission = async () => {
+        if (!("Notification" in window)) {
+            showToast("Browser tidak mendukung notifikasi", "error");
+            return;
+        }
+        if (Notification.permission === "denied") {
+            showToast("Izin diblokir. Harap aktifkan di Settings Browser HP Anda.", "error");
+            return;
+        }
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+            showToast("Notifikasi Sistem Aktif");
+            window.sendRealtimeNotification("Koneksi Berhasil", "Perangkat ini sekarang terhubung ke sistem agenda.");
+        }
+    };
+
+    window.sendRealtimeNotification = (title, body) => {
+        if (Notification.permission !== "granted") return;
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, {
+                    body: body,
+                    icon: 'logo_mateng.png',
+                    badge: 'logo_mateng.png',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                }).catch(err => {
+                    // Fallback if showNotification fails
+                    new Notification(title, { body, icon: 'logo_mateng.png' });
+                });
+            });
+        } else { 
+            new Notification(title, { body, icon: 'logo_mateng.png' }); 
+        }
+    };
+
+    window.sendTestNotification = () => {
+        if (Notification.permission !== "granted") window.requestNotificationPermission();
+        else window.sendRealtimeNotification("Tes Notifikasi", "Berhasil! Notifikasi ini muncul di jendela sistem HP Anda.");
+    };
+
+    window.filterDashboard = (f) => { 
+        dashboardFilter = f; 
+        document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('stat-card-active')); 
+        const card = document.getElementById(`stat-${f}-card`);
+        if (card) card.classList.add('stat-card-active'); 
+        const resetBtn = document.getElementById('reset-filter');
+        if (resetBtn) resetBtn.classList.toggle('hidden', f === 'today'); 
+        renderTimeline(); 
+        document.getElementById('schedule-section')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    window.handleAuthAction = () => { 
+        if (userRole === 'ADC') { 
+            userRole = 'Executive'; 
+            document.getElementById('auth-btn').innerHTML = '<i data-lucide="lock" class="w-3.5 h-3.5"></i><span>ADC</span>'; 
+            document.getElementById('admin-panel').classList.add('hidden'); 
+            document.getElementById('main-display-name').innerText = 'Dr.H. Askary, S.Sos., M.Si'; 
+            document.getElementById('main-display-role').innerText = 'Wakil Bupati Mamuju Tengah';
+            refreshUI(); lucide.createIcons();
+        } else { 
+            document.getElementById('login-modal').classList.remove('hidden'); 
+            document.getElementById('login-pin').focus(); 
+        } 
+    };
+    
+    window.verifyPin = () => { 
+        if (document.getElementById('login-pin').value === '1234') { 
+            userRole = 'ADC'; 
+            showToast("Akses Administrasi"); 
+            document.getElementById('auth-btn').innerHTML = '<i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>Logout</span>'; 
+            document.getElementById('admin-panel').classList.remove('hidden'); 
+            document.getElementById('main-display-name').innerText = 'Administrator Sistem'; 
+            document.getElementById('main-display-role').innerText = 'Panel Wakil Bupati';
+            window.closeLogin(); refreshUI(); lucide.createIcons();
+        } else { showToast("PIN Salah", "error"); } 
+    };
+    
+    window.closeLogin = () => { document.getElementById('login-modal').classList.add('hidden'); document.getElementById('login-pin').value = ''; };
+    window.openActivityModal = () => { 
+        document.getElementById('activity-modal').classList.remove('hidden'); 
+        document.getElementById('activity-form').reset(); 
+        document.getElementById('form-id').value = ''; 
+        document.getElementById('modal-title').innerText = "Buat Agenda"; 
+        document.getElementById('delete-btn').classList.add('hidden'); 
+        document.getElementById('file-name').innerText = "Pilih File"; 
+        currentPhotos = []; updatePhotosPreview();
+    };
+    window.closeActivityModal = () => document.getElementById('activity-modal').classList.add('hidden');
+    
+    window.editEntry = (id) => { 
+        const a = activities.find(x => x.id === id); 
+        if (!a) return; 
+        window.openActivityModal(); 
+        document.getElementById('modal-title').innerText = "Ubah Agenda"; 
+        document.getElementById('form-id').value = a.id; 
+        document.getElementById('f-title').value = a.title; 
+        document.getElementById('f-date').value = a.date; 
+        document.getElementById('f-time').value = a.time; 
+        document.getElementById('f-location').value = a.location; 
+        document.getElementById('f-status').value = a.status; 
+        document.getElementById('f-file-data').value = a.file || ''; 
+        currentPhotos = a.photos ? JSON.parse(a.photos) : [];
+        updatePhotosPreview();
+        document.getElementById('delete-btn').classList.remove('hidden'); 
+    };
+
+    window.deleteEntry = async () => { 
+        const id = document.getElementById('form-id').value; 
+        if (id && confirm("Hapus agenda ini?")) { 
+            await deleteDoc(doc(db, 'artifacts', appIdForPath, 'public', 'data', 'activities', id)); 
+            window.closeActivityModal(); showToast("Dihapus"); 
+        } 
+    };
+
+    window.viewFile = (data) => { 
+        const m = document.getElementById('viewer-modal'); 
+        const img = document.getElementById('view-img'); 
+        const pdf = document.getElementById('view-pdf'); 
+        m.classList.remove('hidden'); 
+        if (data.startsWith('data:application/pdf')) { pdf.src = data; pdf.classList.remove('hidden'); img.classList.add('hidden'); }
+        else { img.src = data; img.classList.remove('hidden'); pdf.classList.add('hidden'); } 
+    };
+    window.closeViewer = () => { document.getElementById('viewer-modal').classList.add('hidden'); document.getElementById('view-pdf').src = ''; };
+
+    // --- Internal Logic ---
+    const init = async () => {
+        await registerSW();
+        try {
+            await signInAnonymously(auth);
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    onSnapshot(query(colRef), (snap) => {
+                        snap.docChanges().forEach(change => {
+                            if (change.type === 'added' && !isInitialLoad) {
+                                window.sendRealtimeNotification("Agenda Baru Ditambahkan", change.doc.data().title);
+                            }
+                        });
+                        activities = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        refreshUI();
+                        if (isInitialLoad) isInitialLoad = false;
+                    });
+                }
+            });
+        } catch (e) { console.error(e); }
+    };
+
+    const refreshUI = () => {
+        const now = new Date().toISOString().split('T')[0];
+        const todayCount = document.getElementById('count-today');
+        const upcomingCount = document.getElementById('count-upcoming');
+        const finishedCount = document.getElementById('count-finished');
+        const postponedCount = document.getElementById('count-postponed');
+
+        if(todayCount) todayCount.textContent = activities.filter(a => a.date === now).length;
+        if(upcomingCount) upcomingCount.textContent = activities.filter(a => a.date > now).length;
+        if(finishedCount) finishedCount.textContent = activities.filter(a => a.status === 'Selesai').length;
+        if(postponedCount) postponedCount.textContent = activities.filter(a => a.status === 'Ditunda').length;
+        updateCharts();
+        renderTimeline();
+    };
+
+    const renderTimeline = () => {
+        const container = document.getElementById('timeline-container');
+        const now = new Date().toISOString().split('T')[0];
+        const header = document.getElementById('timeline-header');
+        if (!container) return;
+
+        let filtered = [];
+        switch(dashboardFilter) {
+            case 'today': filtered = activities.filter(a => a.date === now).sort((a,b) => a.time.localeCompare(b.time)); header.innerText = "AGENDA HARI INI"; break;
+            case 'upcoming': filtered = activities.filter(a => a.date > now).sort((a,b) => a.date.localeCompare(b.date)); header.innerText = "AGENDA MENDATANG"; break;
+            case 'finished': filtered = activities.filter(a => a.status === 'Selesai').sort((a,b) => b.date.localeCompare(a.date)); header.innerText = "AGENDA TERLAKSANA"; break;
+            case 'postponed': filtered = activities.filter(a => a.status === 'Ditunda').sort((a,b) => b.date.localeCompare(a.date)); header.innerText = "AGENDA DITUNDA"; break;
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="py-20 text-center animate-in"><p class="text-slate-300 font-bold uppercase text-[10px]">Data Kosong</p></div>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map(a => {
+            const photos = a.photos ? JSON.parse(a.photos) : [];
+            const isSelesai = a.status === 'Selesai';
+            const isTunda = a.status === 'Ditunda';
+            return `
+                <div class="flex gap-4 md:gap-12 relative z-10 animate-in">
+                    <div class="w-10 h-10 md:w-14 md:h-14 rounded-2xl border-4 border-white shadow-lg mt-4 shrink-0 flex items-center justify-center ${isSelesai ? 'bg-emerald-600' : (isTunda ? 'bg-rose-600' : 'bg-indigo-700')}">
+                         <i data-lucide="${isSelesai ? 'check' : 'clock'}" class="w-4 h-4 md:w-6 md:h-6 text-white"></i>
+                    </div>
+                    <div class="flex-1 executive-card p-6 md:p-10 rounded-3xl md:rounded-[3.5rem] shadow-sm">
+                        <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="text-xs md:text-base font-black text-indigo-900 uppercase">${a.time} WITA</span>
+                                <span class="text-[8px] md:text-[10px] bg-slate-100 px-4 py-1.5 rounded-full text-slate-500 font-bold uppercase">${a.date}</span>
+                            </div>
+                            <span class="status-badge w-fit px-5 py-2 rounded-full ${isSelesai ? 'bg-emerald-100 text-emerald-700' : (isTunda ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700')}">${a.status}</span>
+                        </div>
+                        <h5 class="text-lg md:text-2xl font-black text-slate-900 mb-4">${a.title}</h5>
+                        <div class="flex items-center gap-2 md:gap-4 text-slate-500 text-xs md:text-sm font-bold mb-6"><i data-lucide="map-pin" class="w-4 h-4 text-indigo-300"></i> ${a.location || 'Konfirmasi Lokasi'}</div>
+                        ${photos.length > 0 ? `<div class="mb-6"><div class="photo-grid">${photos.map(p => `<img src="${p}" onclick="window.viewFile('${p.replace(/'/g, "\\'")}')" class="h-20 md:h-28 w-full object-cover rounded-2xl cursor-pointer hover:brightness-90 transition-all border-2 border-white shadow-sm">`).join('')}</div></div>` : ''}
+                        <div class="flex gap-3 md:gap-6 border-t border-slate-50 pt-6">
+                            ${a.file ? `<button onclick="window.viewFile('${a.file.replace(/'/g, "\\'")}')" class="flex-1 btn-gradient py-4 rounded-2xl text-[9px] font-black uppercase flex items-center justify-center gap-2 shadow-lg"><i data-lucide="file-text" class="w-4 h-4"></i> Lihat Surat</button>` : `<div class="flex-1 py-4 text-[8px] text-slate-300 font-black uppercase flex items-center justify-center border-2 border-dashed border-slate-100 rounded-2xl">Arsip Digital</div>`}
+                            ${userRole === 'ADC' ? `<button onclick="window.editEntry('${a.id}')" class="p-4 bg-slate-900 text-white rounded-2xl hover:bg-indigo-700 shadow-xl group"><i data-lucide="edit-3" class="w-5 h-5 group-hover:scale-110"></i></button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        lucide.createIcons();
+    };
+
+    const updateCharts = () => {
+        const stats = { Selesai: activities.filter(a => a.status === 'Selesai').length, Terjadwal: activities.filter(a => a.status === 'Terjadwal').length, Ditunda: activities.filter(a => a.status === 'Ditunda').length };
+        const ctx = document.getElementById('statusChart');
+        if (!ctx) return;
+        if (charts.status) charts.status.destroy();
+        charts.status = new Chart(ctx, { 
+            type: 'doughnut', 
+            data: { labels: ['Selesai', 'Jadwal', 'Tunda'], datasets: [{ data: [stats.Selesai, stats.Terjadwal, stats.Ditunda], backgroundColor: ['#059669', '#1e3a8a', '#e11d48'], borderWidth: 0 }] }, 
+            options: { cutout: '75%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: 'bold' } } } } } 
+        });
+    };
+
+    const checkTimers = () => {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        if (now.getHours() === 7 && now.getMinutes() === 0 && lastSummaryDate !== todayStr) {
+            const todayAgendas = activities.filter(a => a.date === todayStr && a.status === 'Terjadwal');
+            if (todayAgendas.length > 0) window.sendRealtimeNotification("Laporan Pagi", `Hari ini ada ${todayAgendas.length} agenda.`);
+            lastSummaryDate = todayStr;
+        }
+        activities.forEach(a => {
+            if (a.date === todayStr && a.status === 'Terjadwal') {
+                const [h, m] = a.time.split(':').map(Number);
+                const agendaTime = new Date(); agendaTime.setHours(h, m, 0, 0);
+                const diff = (agendaTime - now) / 60000;
+                if (Math.floor(diff) === 15 && !notifiedIds.has(a.id + '_15')) {
+                    window.sendRealtimeNotification("Pengingat Agenda", `15 menit lagi: ${a.title}`);
+                    notifiedIds.add(a.id + '_15');
+                }
+                if (Math.floor(diff) === 0 && !notifiedIds.has(a.id + '_0')) {
+                    window.sendRealtimeNotification("Agenda Dimulai", a.title);
+                    notifiedIds.add(a.id + '_0');
+                }
+            }
+        });
+    };
+
+    const updatePhotosPreview = () => {
+        const container = document.getElementById('photos-preview-container');
+        if (!container) return;
+        container.innerHTML = currentPhotos.map((p, idx) => `
+            <div class="relative w-16 h-16 group">
+                <img src="${p}" class="w-full h-full object-cover rounded-xl border border-slate-200 shadow-sm">
+                <button type="button" onclick="window.removePhoto(${idx})" class="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1"><i data-lucide="x" class="w-3 h-3"></i></button>
+            </div>
+        `).join('');
+        lucide.createIcons();
+        document.getElementById('f-photos-data').value = JSON.stringify(currentPhotos);
+    };
+
+    window.removePhoto = (index) => { currentPhotos.splice(index, 1); updatePhotosPreview(); };
+
+    const showToast = (msg, type = 'success') => { 
+        const t = document.getElementById('toast'); 
+        const m = document.getElementById('toast-message');
+        if (!t || !m) return;
+        m.innerText = msg; 
+        document.getElementById('toast-icon-bg').className = type === 'success' ? 'p-2 bg-emerald-500/20 text-emerald-500 rounded-xl' : 'p-2 bg-rose-500/20 text-rose-500 rounded-xl'; 
+        t.classList.remove('translate-x-full', 'opacity-0'); 
+        setTimeout(() => t.classList.add('translate-x-full', 'opacity-0'), 4000); 
+    };
+
+    document.getElementById('f-photos-input').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        for (let file of files) {
+            const reader = new FileReader();
+            reader.onload = (ev) => { currentPhotos.push(ev.target.result); updatePhotosPreview(); };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('f-file-input').addEventListener('change', async (e) => { 
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader(); 
+        reader.onload = (ev) => { document.getElementById('f-file-data').value = ev.target.result; document.getElementById('file-name').innerText = "✅ Tersimpan"; }; 
+        reader.readAsDataURL(file); 
+    });
+
+    document.getElementById('activity-form').onsubmit = async (e) => { 
+        e.preventDefault(); 
+        const id = document.getElementById('form-id').value; 
+        const data = { 
+            title: document.getElementById('f-title').value, date: document.getElementById('f-date').value, 
+            time: document.getElementById('f-time').value, location: document.getElementById('f-location').value, 
+            status: document.getElementById('f-status').value, file: document.getElementById('f-file-data').value || null, 
+            photos: document.getElementById('f-photos-data').value || null, updatedAt: serverTimestamp() 
+        }; 
+        try { 
+            if (id) await setDoc(doc(db, 'artifacts', appIdForPath, 'public', 'data', 'activities', id), data, { merge: true }); 
+            else await addDoc(colRef, data); 
+            showToast("Berhasil!"); window.closeActivityModal(); 
+        } catch (err) { showToast("Gagal!", "error"); } 
+    };
+
+    setInterval(() => { 
+        const now = new Date(); 
+        const clockEl = document.getElementById('clock');
+        const dateEl = document.getElementById('date-display');
+        if (clockEl) clockEl.innerText = now.toLocaleTimeString('id-ID', { hour12: false }); 
+        if (dateEl) dateEl.innerText = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); 
+        if (now.getSeconds() === 0) checkTimers();
+    }, 1000);
+    
+    init(); lucide.createIcons();
+</script>
+
+</body>
+</html>
